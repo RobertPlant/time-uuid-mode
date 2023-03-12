@@ -10,6 +10,7 @@
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "24.3"))
+;; SPDX-License-Identifier: GPL-3.0-only
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -72,7 +73,7 @@
          (hex-time-stamp (concat time-high time-mid time-low))
          (int-time (- (string-to-number hex-time-stamp 16) 122192928000000000))
          (int-millisec (/ int-time 10000000)))
-    (format-time-string "%Y-%m-%dT%H:%M:%S" (seconds-to-time int-millisec))))
+    (format-time-string "%FT%T" (seconds-to-time int-millisec))))
 
 ;;;###autoload
 (define-minor-mode time-uuid-mode
@@ -80,11 +81,11 @@
   :lighter " UUID"
   (if time-uuid-mode
       (progn
-        (add-hook 'post-command-hook 'time-uuid-mode-overlay-all-uuid-v1s nil t)
-        (add-hook 'kill-buffer-hook 'time-uuid-mode-remove-all-overlays nil t))
+        (add-hook 'post-command-hook #'time-uuid-mode-overlay-all-uuid-v1s nil t)
+        (add-hook 'kill-buffer-hook #'time-uuid-mode-remove-all-overlays nil t))
     (time-uuid-mode-remove-all-overlays)
-    (remove-hook 'post-command-hook 'time-uuid-mode-overlay-all-uuid-v1s t)
-    (remove-hook 'kill-buffer-hook 'time-uuid-mode-remove-all-overlays t)))
+    (remove-hook 'post-command-hook #'time-uuid-mode-overlay-all-uuid-v1s t)
+    (remove-hook 'kill-buffer-hook #'time-uuid-mode-remove-all-overlays t)))
 
 ;;;###autoload
 (defun time-uuid-mode-preview-formatted-time ()

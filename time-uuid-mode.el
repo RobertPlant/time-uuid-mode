@@ -33,12 +33,17 @@
 
 ;;; Code:
 
-;; Define a regular expression to match time-based UUIDs
 (defconst time-uuid-mode-regexp
-  "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-1[0-9a-f]\\{3\\}-[89ab][0-9a-f]\\{3\\}-[0-9a-f]\\{12\\}\\b")
+  "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-1[0-9a-f]\\{3\\}-[89ab][0-9a-f]\\{3\\}-[0-9a-f]\\{12\\}\\b"
+  "Define a regular expression to match time-based UUIDs.")
 
-;; Store the time stamp overlays
-(defvar time-uuid-mode-stamp-overlays nil)
+(defvar time-uuid-mode-stamp-overlays nil
+  "Store the time stamp overlays.")
+
+(defcustom time-uuid-mode-time-ago-flag t
+  "Should the time ago feature be enabled."
+  :type 'boolean
+  :group 'time-uuid-mode)
 
 (defun time-uuid-mode-remove-all-overlays ()
   "Remove time uuids overlays."
@@ -57,8 +62,11 @@
              (formatted-time (time-uuid-mode-uuid-to-iso8601 uuid)))
         (when formatted-time
           (let* ((time-stamp-overlay (make-overlay (1- (line-end-position)) (line-end-position)))
-                 (text-block (propertize formatted-time 'face '(:background "yellow" :foreground "black")))
-                 (formatted-block (concat " " text-block)))
+                 (timestamp-block (propertize formatted-time 'face '(:background "yellow" :foreground "black")))
+                 (time-ago-block (if time-uuid-mode-time-ago-flag
+                        (concat " - " (propertize (time-uuid-mode-time-ago formatted-time) 'face '(:background "yellow" :foreground "black")))
+                        ""))
+                 (formatted-block (concat " " timestamp-block time-ago-block)))
             (overlay-put time-stamp-overlay 'after-string formatted-block)
             (push time-stamp-overlay time-uuid-mode-stamp-overlays)))))))
 
@@ -74,6 +82,26 @@
          (int-time (- (string-to-number hex-time-stamp 16) 122192928000000000))
          (int-millisec (/ int-time 10000000)))
     (format-time-string "%FT%T" (seconds-to-time int-millisec))))
+
+(defun time-uuid-mode-time-ago (iso-date)
+  "Calculate the time difference between the given ISO-DATE 9601 date and now."
+  (let* ((current-time (current-time))
+         (current-date (format-time-string "%Y-%m-%d %H:%M:%S" current-time))
+         (time-diff (time-subtract (date-to-time current-date)
+                                   (date-to-time iso-date)))
+         (seconds (abs (time-to-seconds time-diff)))
+         (minutes (floor (/ seconds 60)))
+         (hours (floor (/ minutes 60)))
+         (days (floor (/ hours 24))))
+    (cond
+     ((>= days 1)
+      (concat (number-to-string days) (if (= days 1) " day ago" " days ago")))
+     ((>= hours 1)
+      (concat (number-to-string hours) (if (= hours 1) " hour ago" " hours ago")))
+     ((>= minutes 1)
+      (concat (number-to-string minutes) (if (= minutes 1) " minute ago" " minutes ago")))
+     (t
+      "Less than a minute ago"))))
 
 ;;;###autoload
 (define-minor-mode time-uuid-mode

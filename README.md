@@ -12,3 +12,8 @@ Exports
 - **Command** `time-uuid-mode-preview-formatted-time ()`
 
   Create an overlay containing the date time beside the UUID v1 at the cursor.
+
+- **Variables** `time-uuid-mode-time-ago-flag`
+
+  Set to t to preview how long ago the displayed date time was, for example it
+  will show "3 Hours ago" beside the timestamp.

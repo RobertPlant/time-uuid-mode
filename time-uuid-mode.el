@@ -121,7 +121,7 @@
   (interactive)
   (let* ((uuid (if (region-active-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))
-                 (thing-at-point 'symbol)))
+                 (thing-at-point 'uuid t)))
          (formatted-time (time-uuid-mode-uuid-to-iso8601 uuid)))
     (when formatted-time
       (let* ((time-stamp-overlay (make-overlay (1- (line-end-position)) (line-end-position)))

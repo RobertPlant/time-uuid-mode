@@ -1,12 +1,12 @@
 ;;; time-uuid-mode.el --- Minor mode for previewing time uuids as an overlay -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2023 Robert Plant
+;; Copyright (C) 2024 Robert Plant
 ;;
 ;; Author: Robert Plant <rob@robertplant.io>
 ;; Maintainer: Robert Plant <rob@robertplant.io>
 ;; Created: March 10, 2023
-;; Modified: March 10, 2023
-;; Version: 0.0.1
+;; Modified: January 12, 2024
+;; Version: 0.0.2
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "24.3"))

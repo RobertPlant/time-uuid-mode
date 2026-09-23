@@ -5,8 +5,8 @@
 ;; Author: Robert Plant <rob@robertplant.io>
 ;; Maintainer: Robert Plant <rob@robertplant.io>
 ;; Created: March 10, 2023
-;; Modified: January 12, 2024
-;; Version: 0.0.2
+;; Modified: September 23, 2026
+;; Version: 0.0.3
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "27.1"))

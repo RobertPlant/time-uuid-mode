@@ -9,7 +9,7 @@
 ;; Version: 0.0.2
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "27.1"))
 ;; SPDX-License-Identifier: GPL-3.0-only
 ;;
 ;; This file is not part of GNU Emacs.
@@ -17,11 +17,11 @@
 ;;; Commentary:
 ;;
 ;; This is a convenience tool to search for time UUIDs (v1) and preview the
-;; corresponding date stored within it. This can be useful when loading data
+;; corresponding date stored within it.  This can be useful when loading data
 ;; that uses a v1 UUID to find the latest record.
 ;;
 ;; A single function is also provided to preview a single time UUID under the
-;; cursor, this will clean itself up afterr 5 seconds.
+;; cursor, this will clean itself up after 5 seconds.
 ;;
 ;; Get the development version from git:
 ;;
@@ -41,7 +41,7 @@
   "Store the time stamp overlays.")
 
 (defcustom time-uuid-mode-time-ago-flag t
-  "Should the time ago feature be enabled."
+  "Non-nil means append a relative \"time ago\" phrase to each overlay."
   :type 'boolean
   :group 'time-uuid-mode)
 
@@ -117,7 +117,8 @@
 
 ;;;###autoload
 (defun time-uuid-mode-preview-formatted-time ()
-  "Preview the date time for the selected UUID. The UUID is deleted on a timer."
+  "Preview the date time for the selected UUID.
+The overlay is deleted on a timer."
   (interactive)
   (let* ((uuid (if (region-active-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))

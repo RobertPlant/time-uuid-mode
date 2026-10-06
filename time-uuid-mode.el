@@ -29,7 +29,7 @@
 
 ;;; Code:
 
-(defgroup time-uuid-mode nil
+(defgroup time-uuid nil
   "Preview the timestamps stored in time-based UUIDs."
   :group 'convenience
   :prefix "time-uuid-mode-")
@@ -44,12 +44,12 @@
 (defcustom time-uuid-mode-time-ago-flag t
   "Non-nil means append a relative \"time ago\" phrase to each overlay."
   :type 'boolean
-  :group 'time-uuid-mode)
+  :group 'time-uuid)
 
 (defface time-uuid-mode-label
   '((t :background "yellow" :foreground "black"))
   "Face for the timestamp shown beside a time-based UUID."
-  :group 'time-uuid-mode)
+  :group 'time-uuid)
 
 (defun time-uuid-mode-remove-all-overlays ()
   "Remove time uuids overlays."
@@ -125,7 +125,7 @@ no window shows it.  The ignored arguments let this run from
 (define-minor-mode time-uuid-mode
   "Overlay time-based UUIDs with the corresponding date and time."
   :lighter " UUID"
-  :group 'time-uuid-mode
+  :group 'time-uuid
   (if time-uuid-mode
       (progn
         ;; `post-command-hook' runs before redisplay, so after a jump like

@@ -1,6 +1,6 @@
 ;;; time-uuid-mode-test.el --- Tests for time-uuid-mode  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2026 Rob Plant
+;; Copyright (C) 2026 Robert Plant
 
 ;; This file is not part of GNU Emacs.
 
@@ -64,8 +64,7 @@ cannot leak state into one another."
 
 (defun time-uuid-mode-test--ago (seconds-ago)
   "Return the time-ago phrase for a timestamp SECONDS-AGO in the past."
-  (time-uuid-mode-time-ago
-   (format-time-string "%FT%T" (time-subtract (current-time) seconds-ago))))
+  (time-uuid-mode-time-ago (time-subtract (current-time) seconds-ago)))
 
 ;;;; Decoding
 
@@ -166,6 +165,40 @@ without bound as the user types."
     (should-not (memq #'time-uuid-mode-overlay-all-uuid-v1s
                       (buffer-local-value 'post-command-hook (current-buffer))))))
 
+(ert-deftest time-uuid-mode-test-buffers-keep-their-own-overlays ()
+  "Repainting or killing one buffer leaves another buffer's labels alone.
+The overlay list used to be global, so typing in one buffer wiped every
+other buffer's labels."
+  (let ((a (generate-new-buffer "a"))
+        (b (generate-new-buffer "b")))
+    (unwind-protect
+        (progn
+          (dolist (buffer (list a b))
+            (with-current-buffer buffer
+              (insert time-uuid-mode-test--uuid)
+              (time-uuid-mode-overlay-all-uuid-v1s)))
+          (kill-buffer b)
+          (with-current-buffer a
+            (should (= 1 (length (time-uuid-mode-test--labels))))))
+      (kill-buffer a)
+      (when (buffer-live-p b) (kill-buffer b)))))
+
+(ert-deftest time-uuid-mode-test-paints-from-window-start ()
+  "With the buffer in a window, text above `window-start' is not searched."
+  (let ((buffer (generate-new-buffer "w"))
+        (window (selected-window))
+        (old (window-buffer (selected-window))))
+    (unwind-protect
+        (with-current-buffer buffer
+          (insert time-uuid-mode-test--uuid "\n"
+                  "8757c000-b0dd-11ee-89ab-0123456789ac\n")
+          (set-window-buffer window buffer)
+          (set-window-start window (line-beginning-position 0))
+          (time-uuid-mode-overlay-all-uuid-v1s)
+          (should (= 1 (length (time-uuid-mode-test--labels)))))
+      (set-window-buffer window old)
+      (kill-buffer buffer))))
+
 ;;;; Time ago
 
 (ert-deftest time-uuid-mode-test-time-ago-units ()
@@ -182,7 +215,7 @@ without bound as the user types."
   "The difference is taken as an absolute value, so future stamps read \"ago\".
 Documenting the current behaviour: v1 UUIDs from a clock running ahead
 would otherwise produce a negative count."
-  (should (equal (time-uuid-mode-test--ago (* -2 86400)) "2 days ago")))
+  (should (equal (time-uuid-mode-test--ago (- (* -2 86400) 10)) "2 days ago")))
 
 ;;;; Preview
 
@@ -193,6 +226,23 @@ would otherwise produce a negative count."
     (time-uuid-mode-preview-formatted-time)
     (should (equal (time-uuid-mode-test--labels)
                    (list (concat " " time-uuid-mode-test--iso))))))
+
+(ert-deftest time-uuid-mode-test-preview-rejects-non-uuids ()
+  "No UUID at point, a v4 UUID, or a short region is a `user-error'.
+A v4 UUID used to decode to a confident but meaningless date, and the
+other two signalled raw type errors."
+  (time-uuid-mode-test--with-buffer "hello"
+    (should-error (time-uuid-mode-preview-formatted-time) :type 'user-error))
+  (time-uuid-mode-test--with-buffer "8757c000-b0dd-41ee-89ab-0123456789ab"
+    (goto-char (+ (point-min) 4))
+    (should-error (time-uuid-mode-preview-formatted-time) :type 'user-error)
+    (should (equal (time-uuid-mode-test--labels) nil)))
+  (time-uuid-mode-test--with-buffer "abc"
+    (let ((transient-mark-mode t))
+      (set-mark (point-min))
+      (goto-char (+ (point-min) 2))
+      (activate-mark)
+      (should-error (time-uuid-mode-preview-formatted-time) :type 'user-error))))
 
 (provide 'time-uuid-mode-test)
 ;;; time-uuid-mode-test.el ends here

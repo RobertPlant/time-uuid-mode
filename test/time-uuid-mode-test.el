@@ -206,8 +206,6 @@ Documenting the current behaviour: v1 UUIDs from a clock running ahead
 would otherwise produce a negative count."
   (should (equal (time-uuid-mode-test--describe-ago (- (* -2 86400) 10)) "2 days ago")))
 
-;;;; Preview
-
 (ert-deftest time-uuid-mode-test-preview-labels-uuid-at-point ()
   "The preview command labels the UUID under the cursor."
   (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid

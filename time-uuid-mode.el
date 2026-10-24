@@ -92,14 +92,12 @@ A TIME in the future is described the same way."
 (defun time-uuid-mode--add-label (uuid time-ago)
   "Label the current line with the time stored in UUID and return the overlay.
 Non-nil TIME-AGO appends a relative \"time ago\" phrase."
-  (let ((overlay (make-overlay (1- (line-end-position)) (line-end-position)))
-        (time (time-uuid-mode--uuid-time uuid)))
-    (overlay-put overlay 'after-string
-                 (concat " " (propertize (format-time-string "%FT%T" time)
-                                         'face 'time-uuid-mode-label)
-                         (when time-ago
-                           (concat " - " (propertize (time-uuid-mode-time-ago time)
-                                                     'face 'time-uuid-mode-label)))))
+  (let* ((time (time-uuid-mode--uuid-time uuid))
+         (stamp (propertize (format-time-string "%FT%T" time) 'face 'time-uuid-mode-label))
+         (ago (when time-ago
+                (concat " - " (propertize (time-uuid-mode-time-ago time) 'face 'time-uuid-mode-label))))
+         (overlay (make-overlay (1- (line-end-position)) (line-end-position))))
+    (overlay-put overlay 'after-string (concat " " stamp ago))
     (push overlay time-uuid-mode-stamp-overlays)
     overlay))
 
@@ -108,14 +106,14 @@ Non-nil TIME-AGO appends a relative \"time ago\" phrase."
 Only the text shown in a window is searched, or the whole buffer when
 no window shows it.  The ignored arguments let this run from
 `window-scroll-functions'."
-  (time-uuid-mode-remove-all-overlays)
-  ;; ponytail: one span from the topmost to the bottommost window, so two
-  ;; windows far apart in a huge buffer scan everything between them.
+  ;; one span from the topmost to the bottommost window, so two windows
+  ;; far apart in a huge buffer scan everything between them
   (let* ((windows (get-buffer-window-list nil nil t))
          (start (if windows (apply #'min (mapcar #'window-start windows)) (point-min)))
          (end (if windows
                   (apply #'max (mapcar (lambda (window) (window-end window t)) windows))
                 (point-max))))
+    (time-uuid-mode-remove-all-overlays)
     (save-excursion
       (goto-char start)
       (while (re-search-forward time-uuid-mode-regexp end t)

@@ -23,13 +23,12 @@
 ;;; Code:
 
 (require 'ert)
+(require 'seq)
 (require 'time-uuid-mode)
 
 ;; The decoder formats in the local zone, so the fixed vectors below only
 ;; hold if the zone is pinned.  Do it once, at load, for the whole suite.
 (setenv "TZ" "UTC")
-
-;;;; Fixtures
 
 (defconst time-uuid-mode-test--uuid "8757c000-b0dd-11ee-89ab-0123456789ab"
   "A v1 UUID whose embedded time is 2024-01-12T00:00:00Z.")
@@ -54,19 +53,15 @@ cannot leak state into one another."
 
 (defun time-uuid-mode-test--list-labels ()
   "Return the overlay strings painted in the buffer, in buffer order."
-  (let (labels)
-    (dolist (overlay (sort (overlays-in (point-min) (point-max))
-                           (lambda (a b) (< (overlay-start a) (overlay-start b)))))
-      (let ((after (overlay-get overlay 'after-string)))
-        (when after
-          (push (substring-no-properties after) labels))))
-    (nreverse labels)))
+  (let* ((overlays (seq-sort (lambda (a b) (< (overlay-start a) (overlay-start b)))
+                             (overlays-in (point-min) (point-max))))
+         (after-strings (remq nil (mapcar (lambda (overlay) (overlay-get overlay 'after-string))
+                                          overlays))))
+    (mapcar #'substring-no-properties after-strings)))
 
 (defun time-uuid-mode-test--describe-ago (seconds-ago)
   "Return the time-ago phrase for a timestamp SECONDS-AGO in the past."
   (time-uuid-mode-describe-time-ago (time-subtract (current-time) seconds-ago)))
-
-;;;; Decoding
 
 (ert-deftest time-uuid-mode-test-decodes-known-uuid ()
   "A v1 UUID decodes to the timestamp packed into its first three fields."
@@ -98,8 +93,6 @@ so a decoder that truncates anywhere shows a wildly wrong year."
                   "00000000-b0de-11ee-89ab-0123456789ab")
                  "2024-01-12T00:03:22")))
 
-;;;; The regexp
-
 (ert-deftest time-uuid-mode-test-regexp-matches-v1 ()
   "The regexp finds a v1 UUID embedded in surrounding text."
   (should (string-match time-uuid-mode-regexp
@@ -116,8 +109,6 @@ so a decoder that truncates anywhere shows a wildly wrong year."
   "The variant nibble must be one of 8, 9, a or b."
   (should-not (string-match time-uuid-mode-regexp
                             "8757c000-b0dd-11ee-79ab-0123456789ab")))
-
-;;;; Painting
 
 (ert-deftest time-uuid-mode-test-overlays-every-uuid ()
   "Each matching UUID gets its own end-of-line label."
@@ -199,8 +190,6 @@ other buffer's labels."
       (set-window-buffer window old)
       (kill-buffer buffer))))
 
-;;;; Time ago
-
 (ert-deftest time-uuid-mode-test-time-ago-units ()
   "Each unit is picked at its own threshold and pluralised."
   (should (equal (time-uuid-mode-test--describe-ago 30) "Less than a minute ago"))
@@ -216,8 +205,6 @@ other buffer's labels."
 Documenting the current behaviour: v1 UUIDs from a clock running ahead
 would otherwise produce a negative count."
   (should (equal (time-uuid-mode-test--describe-ago (- (* -2 86400) 10)) "2 days ago")))
-
-;;;; Preview
 
 (ert-deftest time-uuid-mode-test-preview-labels-uuid-at-point ()
   "The preview command labels the UUID under the cursor."

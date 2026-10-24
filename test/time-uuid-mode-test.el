@@ -169,25 +169,25 @@ without bound as the user types."
   "Repainting or killing one buffer leaves another buffer's labels alone.
 The overlay list used to be global, so typing in one buffer wiped every
 other buffer's labels."
-  (let ((a (generate-new-buffer "a"))
-        (b (generate-new-buffer "b")))
+  (let ((first-buffer (generate-new-buffer "a"))
+        (second-buffer (generate-new-buffer "b")))
     (unwind-protect
         (progn
-          (dolist (buffer (list a b))
+          (dolist (buffer (list first-buffer second-buffer))
             (with-current-buffer buffer
               (insert time-uuid-mode-test--uuid)
               (time-uuid-mode-overlay-all-uuid-v1s)))
-          (kill-buffer b)
-          (with-current-buffer a
+          (kill-buffer second-buffer)
+          (with-current-buffer first-buffer
             (should (= 1 (length (time-uuid-mode-test--list-labels))))))
-      (kill-buffer a)
-      (when (buffer-live-p b) (kill-buffer b)))))
+      (kill-buffer first-buffer)
+      (when (buffer-live-p second-buffer) (kill-buffer second-buffer)))))
 
 (ert-deftest time-uuid-mode-test-paints-from-window-start ()
   "With the buffer in a window, text above `window-start' is not searched."
   (let ((buffer (generate-new-buffer "w"))
         (window (selected-window))
-        (old (window-buffer (selected-window))))
+        (old-buffer (window-buffer (selected-window))))
     (unwind-protect
         (with-current-buffer buffer
           (insert time-uuid-mode-test--uuid "\n"
@@ -196,7 +196,7 @@ other buffer's labels."
           (set-window-start window (line-beginning-position 0))
           (time-uuid-mode-overlay-all-uuid-v1s)
           (should (= 1 (length (time-uuid-mode-test--list-labels)))))
-      (set-window-buffer window old)
+      (set-window-buffer window old-buffer)
       (kill-buffer buffer))))
 
 ;;;; Time ago

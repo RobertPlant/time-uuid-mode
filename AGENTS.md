@@ -15,9 +15,9 @@ the same three on Emacs 27.1 to 31.1, so nothing newer than `Package-Requires` a
 - `;;;###autoload` on the mode and interactive commands only.
 - `let*` names each step and each condition, then `when` for guards and `cond` / `pcase` for cases. Close
   parens on the last line, never on their own.
-- Helpers compute and return values (`time-uuid-mode--uuid-time`, `time-uuid-mode-time-ago`). Overlays and
-  hooks only change in the mode, the scan and the preview command. Buffer-local hooks use the `nil t` local
-  arguments.
+- Helpers compute and return values (`time-uuid-mode--parse-uuid-time`, `time-uuid-mode-describe-time-ago`).
+  Overlays and hooks only change in the mode, the scan and the preview command. Buffer-local hooks use the
+  `nil t` local arguments.
 - `seq-*` and `mapcar` over loops. `dolist` only where the body is a side effect (making overlays).
 - Nothing destructive on values you were given: `remove` not `delete`, `append` not `nconc`, `reverse` not
   `nreverse`. No `setq` on an argument, plain `let` for temporaries.

@@ -51,7 +51,7 @@ cannot leak state into one another."
        (when (eq (timer--function timer) #'delete-overlay)
          (cancel-timer timer)))))
 
-(defun time-uuid-mode-test--labels ()
+(defun time-uuid-mode-test--list-labels ()
   "Return the overlay strings painted in the buffer, in buffer order."
   (let* ((overlays (seq-sort (lambda (a b) (< (overlay-start a) (overlay-start b)))
                              (overlays-in (point-min) (point-max))))
@@ -59,24 +59,24 @@ cannot leak state into one another."
                                           overlays))))
     (mapcar #'substring-no-properties after-strings)))
 
-(defun time-uuid-mode-test--ago (seconds-ago)
+(defun time-uuid-mode-test--describe-ago (seconds-ago)
   "Return the time-ago phrase for a timestamp SECONDS-AGO in the past."
-  (time-uuid-mode-time-ago (time-subtract (current-time) seconds-ago)))
+  (time-uuid-mode-describe-time-ago (time-subtract (current-time) seconds-ago)))
 
 (ert-deftest time-uuid-mode-test-decodes-known-uuid ()
   "A v1 UUID decodes to the timestamp packed into its first three fields."
-  (should (equal (time-uuid-mode-uuid-to-iso8601 time-uuid-mode-test--uuid)
+  (should (equal (time-uuid-mode-format-uuid-time time-uuid-mode-test--uuid)
                  time-uuid-mode-test--iso)))
 
 (ert-deftest time-uuid-mode-test-decode-ignores-clock-and-node ()
   "Only time-low, time-mid and time-high feed the timestamp."
-  (should (equal (time-uuid-mode-uuid-to-iso8601
+  (should (equal (time-uuid-mode-format-uuid-time
                   "8757c000-b0dd-11ee-bfff-ffffffffffff")
                  time-uuid-mode-test--iso)))
 
 (ert-deftest time-uuid-mode-test-decode-is-case-insensitive-on-digits ()
   "Uppercase hex decodes the same as lowercase."
-  (should (equal (time-uuid-mode-uuid-to-iso8601
+  (should (equal (time-uuid-mode-format-uuid-time
                   (upcase time-uuid-mode-test--uuid))
                  time-uuid-mode-test--iso)))
 
@@ -84,12 +84,12 @@ cannot leak state into one another."
   "time-low wrapping into time-mid must not lose the carry.
 The UUID epoch is 1582; these timestamps are far wider than 32 bits,
 so a decoder that truncates anywhere shows a wildly wrong year."
-  (should (equal (time-uuid-mode-uuid-to-iso8601
+  (should (equal (time-uuid-mode-format-uuid-time
                   "ffffffff-b0dd-11ee-89ab-0123456789ab")
                  "2024-01-12T00:03:22"))
   ;; One 100ns tick later, with the carry landing in time-mid: a decoder
   ;; that truncates puts these two decades apart.
-  (should (equal (time-uuid-mode-uuid-to-iso8601
+  (should (equal (time-uuid-mode-format-uuid-time
                   "00000000-b0de-11ee-89ab-0123456789ab")
                  "2024-01-12T00:03:22")))
 
@@ -116,7 +116,7 @@ so a decoder that truncates anywhere shows a wildly wrong year."
       (concat time-uuid-mode-test--uuid "\n" time-uuid-mode-test--uuid "\n")
     (let ((time-uuid-mode-time-ago-flag nil))
       (time-uuid-mode-overlay-all-uuid-v1s)
-      (should (equal (time-uuid-mode-test--labels)
+      (should (equal (time-uuid-mode-test--list-labels)
                      (list (concat " " time-uuid-mode-test--iso)
                            (concat " " time-uuid-mode-test--iso)))))))
 
@@ -126,14 +126,14 @@ so a decoder that truncates anywhere shows a wildly wrong year."
     (let ((time-uuid-mode-time-ago-flag t))
       (time-uuid-mode-overlay-all-uuid-v1s)
       (should (string-prefix-p (concat " " time-uuid-mode-test--iso " - ")
-                               (car (time-uuid-mode-test--labels))))
-      (should (string-suffix-p "days ago" (car (time-uuid-mode-test--labels)))))))
+                               (car (time-uuid-mode-test--list-labels))))
+      (should (string-suffix-p "days ago" (car (time-uuid-mode-test--list-labels)))))))
 
 (ert-deftest time-uuid-mode-test-overlay-skips-non-v1 ()
   "A buffer with no v1 UUID gets no overlays."
   (time-uuid-mode-test--with-buffer "8757c000-b0dd-41ee-89ab-0123456789ab\n"
     (time-uuid-mode-overlay-all-uuid-v1s)
-    (should (equal (time-uuid-mode-test--labels) nil))))
+    (should (equal (time-uuid-mode-test--list-labels) nil))))
 
 (ert-deftest time-uuid-mode-test-repaint-does-not-accumulate ()
   "Painting twice replaces the overlays rather than stacking them.
@@ -143,16 +143,16 @@ without bound as the user types."
     (time-uuid-mode-overlay-all-uuid-v1s)
     (time-uuid-mode-overlay-all-uuid-v1s)
     (should (= 1 (length time-uuid-mode-stamp-overlays)))
-    (should (= 1 (length (time-uuid-mode-test--labels))))))
+    (should (= 1 (length (time-uuid-mode-test--list-labels))))))
 
 (ert-deftest time-uuid-mode-test-disabling-the-mode-clears-overlays ()
   "Turning the mode off removes what it painted."
   (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
     (time-uuid-mode 1)
     (time-uuid-mode-overlay-all-uuid-v1s)
-    (should (time-uuid-mode-test--labels))
+    (should (time-uuid-mode-test--list-labels))
     (time-uuid-mode -1)
-    (should (equal (time-uuid-mode-test--labels) nil))
+    (should (equal (time-uuid-mode-test--list-labels) nil))
     (should-not (memq #'time-uuid-mode-overlay-all-uuid-v1s
                       (buffer-local-value 'post-command-hook (current-buffer))))))
 
@@ -170,7 +170,7 @@ other buffer's labels."
               (time-uuid-mode-overlay-all-uuid-v1s)))
           (kill-buffer b)
           (with-current-buffer a
-            (should (= 1 (length (time-uuid-mode-test--labels))))))
+            (should (= 1 (length (time-uuid-mode-test--list-labels))))))
       (kill-buffer a)
       (when (buffer-live-p b) (kill-buffer b)))))
 
@@ -186,32 +186,32 @@ other buffer's labels."
           (set-window-buffer window buffer)
           (set-window-start window (line-beginning-position 0))
           (time-uuid-mode-overlay-all-uuid-v1s)
-          (should (= 1 (length (time-uuid-mode-test--labels)))))
+          (should (= 1 (length (time-uuid-mode-test--list-labels)))))
       (set-window-buffer window old)
       (kill-buffer buffer))))
 
 (ert-deftest time-uuid-mode-test-time-ago-units ()
   "Each unit is picked at its own threshold and pluralised."
-  (should (equal (time-uuid-mode-test--ago 30) "Less than a minute ago"))
-  (should (equal (time-uuid-mode-test--ago 60) "1 minute ago"))
-  (should (equal (time-uuid-mode-test--ago (* 5 60)) "5 minutes ago"))
-  (should (equal (time-uuid-mode-test--ago 3600) "1 hour ago"))
-  (should (equal (time-uuid-mode-test--ago (* 3 3600)) "3 hours ago"))
-  (should (equal (time-uuid-mode-test--ago 86400) "1 day ago"))
-  (should (equal (time-uuid-mode-test--ago (* 9 86400)) "9 days ago")))
+  (should (equal (time-uuid-mode-test--describe-ago 30) "Less than a minute ago"))
+  (should (equal (time-uuid-mode-test--describe-ago 60) "1 minute ago"))
+  (should (equal (time-uuid-mode-test--describe-ago (* 5 60)) "5 minutes ago"))
+  (should (equal (time-uuid-mode-test--describe-ago 3600) "1 hour ago"))
+  (should (equal (time-uuid-mode-test--describe-ago (* 3 3600)) "3 hours ago"))
+  (should (equal (time-uuid-mode-test--describe-ago 86400) "1 day ago"))
+  (should (equal (time-uuid-mode-test--describe-ago (* 9 86400)) "9 days ago")))
 
 (ert-deftest time-uuid-mode-test-time-ago-is-unsigned ()
   "The difference is taken as an absolute value, so future stamps read \"ago\".
 Documenting the current behaviour: v1 UUIDs from a clock running ahead
 would otherwise produce a negative count."
-  (should (equal (time-uuid-mode-test--ago (- (* -2 86400) 10)) "2 days ago")))
+  (should (equal (time-uuid-mode-test--describe-ago (- (* -2 86400) 10)) "2 days ago")))
 
 (ert-deftest time-uuid-mode-test-preview-labels-uuid-at-point ()
   "The preview command labels the UUID under the cursor."
   (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
     (goto-char (+ (point-min) 4))
     (time-uuid-mode-preview-formatted-time)
-    (should (equal (time-uuid-mode-test--labels)
+    (should (equal (time-uuid-mode-test--list-labels)
                    (list (concat " " time-uuid-mode-test--iso))))))
 
 (ert-deftest time-uuid-mode-test-preview-rejects-non-uuids ()
@@ -223,13 +223,21 @@ other two signalled raw type errors."
   (time-uuid-mode-test--with-buffer "8757c000-b0dd-41ee-89ab-0123456789ab"
     (goto-char (+ (point-min) 4))
     (should-error (time-uuid-mode-preview-formatted-time) :type 'user-error)
-    (should (equal (time-uuid-mode-test--labels) nil)))
+    (should (equal (time-uuid-mode-test--list-labels) nil)))
   (time-uuid-mode-test--with-buffer "abc"
     (let ((transient-mark-mode t))
       (set-mark (point-min))
       (goto-char (+ (point-min) 2))
       (activate-mark)
       (should-error (time-uuid-mode-preview-formatted-time) :type 'user-error))))
+
+(ert-deftest time-uuid-mode-test-old-names-still-work ()
+  "The names from before 0.0.5 are obsolete aliases, so callers keep working."
+  (with-no-warnings
+    (should (equal (time-uuid-mode-uuid-to-iso8601 time-uuid-mode-test--uuid)
+                   time-uuid-mode-test--iso))
+    (should (equal (time-uuid-mode-time-ago (time-subtract (current-time) 60))
+                   "1 minute ago"))))
 
 (provide 'time-uuid-mode-test)
 ;;; time-uuid-mode-test.el ends here

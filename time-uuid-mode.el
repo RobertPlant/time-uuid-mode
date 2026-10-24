@@ -5,8 +5,8 @@
 ;; Author: Robert Plant <rob@robertplant.io>
 ;; Maintainer: Robert Plant <rob@robertplant.io>
 ;; Created: March 10, 2023
-;; Modified: October 06, 2026
-;; Version: 0.0.4
+;; Modified: October 24, 2026
+;; Version: 0.0.5
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "27.1"))
@@ -56,7 +56,7 @@
   (mapc #'delete-overlay time-uuid-mode-stamp-overlays)
   (setq time-uuid-mode-stamp-overlays nil))
 
-(defun time-uuid-mode--uuid-time (uuid)
+(defun time-uuid-mode--parse-uuid-time (uuid)
   "Return the time stored in the time-based UUID as a Lisp time value."
   (let* ((hex (replace-regexp-in-string "-" "" uuid))
          ;; time-high, time-mid, time-low; the first nibble of time-high is
@@ -68,11 +68,11 @@
     ;; 100ns ticks since the Gregorian epoch, 1582-10-15.
     (seconds-to-time (/ (- ticks 122192928000000000) 10000000))))
 
-(defun time-uuid-mode-uuid-to-iso8601 (uuid)
+(defun time-uuid-mode-format-uuid-time (uuid)
   "Convert a time-based UUID to ISO-8601 format."
-  (format-time-string "%FT%T" (time-uuid-mode--uuid-time uuid)))
+  (format-time-string "%FT%T" (time-uuid-mode--parse-uuid-time uuid)))
 
-(defun time-uuid-mode-time-ago (time)
+(defun time-uuid-mode-describe-time-ago (time)
   "Describe how long ago TIME was, such as \"3 days ago\".
 A TIME in the future is described the same way."
   (let* ((seconds (abs (float-time (time-subtract (current-time) time))))
@@ -89,13 +89,20 @@ A TIME in the future is described the same way."
      (t
       "Less than a minute ago"))))
 
+(define-obsolete-function-alias 'time-uuid-mode-uuid-to-iso8601
+  #'time-uuid-mode-format-uuid-time "0.0.5")
+
+(define-obsolete-function-alias 'time-uuid-mode-time-ago
+  #'time-uuid-mode-describe-time-ago "0.0.5")
+
 (defun time-uuid-mode--add-label (uuid time-ago)
   "Label the current line with the time stored in UUID and return the overlay.
 Non-nil TIME-AGO appends a relative \"time ago\" phrase."
-  (let* ((time (time-uuid-mode--uuid-time uuid))
+  (let* ((time (time-uuid-mode--parse-uuid-time uuid))
          (stamp (propertize (format-time-string "%FT%T" time) 'face 'time-uuid-mode-label))
          (ago (when time-ago
-                (concat " - " (propertize (time-uuid-mode-time-ago time) 'face 'time-uuid-mode-label))))
+                (concat " - " (propertize (time-uuid-mode-describe-time-ago time)
+                                          'face 'time-uuid-mode-label))))
          (overlay (make-overlay (1- (line-end-position)) (line-end-position))))
     (overlay-put overlay 'after-string (concat " " stamp ago))
     (push overlay time-uuid-mode-stamp-overlays)

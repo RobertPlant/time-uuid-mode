@@ -23,6 +23,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'seq)
 (require 'time-uuid-mode)
 
 ;; The decoder formats in the local zone, so the fixed vectors below only
@@ -52,13 +53,11 @@ cannot leak state into one another."
 
 (defun time-uuid-mode-test--labels ()
   "Return the overlay strings painted in the buffer, in buffer order."
-  (let (labels)
-    (dolist (overlay (sort (overlays-in (point-min) (point-max))
-                           (lambda (a b) (< (overlay-start a) (overlay-start b)))))
-      (let ((after (overlay-get overlay 'after-string)))
-        (when after
-          (push (substring-no-properties after) labels))))
-    (nreverse labels)))
+  (let* ((overlays (seq-sort (lambda (a b) (< (overlay-start a) (overlay-start b)))
+                             (overlays-in (point-min) (point-max))))
+         (after-strings (remq nil (mapcar (lambda (overlay) (overlay-get overlay 'after-string))
+                                          overlays))))
+    (mapcar #'substring-no-properties after-strings)))
 
 (defun time-uuid-mode-test--ago (seconds-ago)
   "Return the time-ago phrase for a timestamp SECONDS-AGO in the past."

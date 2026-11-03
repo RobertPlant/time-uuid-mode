@@ -129,6 +129,22 @@ so a decoder that truncates anywhere shows a wildly wrong year."
                                (car (time-uuid-mode-test--list-labels))))
       (should (string-suffix-p "days ago" (car (time-uuid-mode-test--list-labels)))))))
 
+(ert-deftest time-uuid-mode-test-matches-uppercase-without-case-folding ()
+  "Uppercase UUIDs are labelled and previewed with `case-fold-search' off.
+The regexp used to be lowercase only, so it leaned on the buffer folding case.
+The variant is a letter here, so its character class is covered too."
+  (time-uuid-mode-test--with-buffer "8757C000-B0DD-11EE-B9AB-0123456789AB"
+    (let ((case-fold-search nil)
+          (time-uuid-mode-time-ago-flag nil))
+      (time-uuid-mode-overlay-all-uuid-v1s)
+      (should (equal (time-uuid-mode-test--list-labels)
+                     (list (concat " " time-uuid-mode-test--iso))))
+      (time-uuid-mode-remove-all-overlays)
+      (goto-char (+ (point-min) 4))
+      (time-uuid-mode-preview-formatted-time)
+      (should (equal (time-uuid-mode-test--list-labels)
+                     (list (concat " " time-uuid-mode-test--iso)))))))
+
 (ert-deftest time-uuid-mode-test-overlay-skips-non-v1 ()
   "A buffer with no v1 UUID gets no overlays."
   (time-uuid-mode-test--with-buffer "8757c000-b0dd-41ee-89ab-0123456789ab\n"
@@ -155,6 +171,20 @@ without bound as the user types."
     (should (equal (time-uuid-mode-test--list-labels) nil))
     (should-not (memq #'time-uuid-mode-overlay-all-uuid-v1s
                       (buffer-local-value 'post-command-hook (current-buffer))))))
+
+(ert-deftest time-uuid-mode-test-mode-repaints-on-scroll ()
+  "The mode hooks `window-scroll-functions' in this buffer only, and unhooks it.
+`post-command-hook' still sees the old `window-start' after a jump like
+`end-of-buffer', so without the scroll hook the new rows go unlabelled."
+  (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
+    (time-uuid-mode 1)
+    (should (memq #'time-uuid-mode-overlay-all-uuid-v1s
+                  (buffer-local-value 'window-scroll-functions (current-buffer))))
+    (should-not (memq #'time-uuid-mode-overlay-all-uuid-v1s
+                      (default-value 'window-scroll-functions)))
+    (time-uuid-mode -1)
+    (should-not (memq #'time-uuid-mode-overlay-all-uuid-v1s
+                      (buffer-local-value 'window-scroll-functions (current-buffer))))))
 
 (ert-deftest time-uuid-mode-test-buffers-keep-their-own-overlays ()
   "Repainting or killing one buffer leaves another buffer's labels alone.
@@ -213,6 +243,21 @@ would otherwise produce a negative count."
     (time-uuid-mode-preview-formatted-time)
     (should (equal (time-uuid-mode-test--list-labels)
                    (list (concat " " time-uuid-mode-test--iso))))))
+
+(ert-deftest time-uuid-mode-test-preview-cleans-up-after-five-seconds ()
+  "The preview label is deleted by a one-shot timer five seconds later."
+  (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
+    (goto-char (+ (point-min) 4))
+    (time-uuid-mode-preview-formatted-time)
+    (let* ((timers (seq-filter (lambda (timer) (eq (timer--function timer) #'delete-overlay))
+                               timer-list))
+           (timer (car timers))
+           (seconds-left (float-time (time-subtract (timer--time timer) (current-time)))))
+      (should (= 1 (length timers)))
+      (should-not (timer--repeat-delay timer))
+      (should (< 4 seconds-left 5.01))
+      (apply (timer--function timer) (timer--args timer))
+      (should (equal (time-uuid-mode-test--list-labels) nil)))))
 
 (ert-deftest time-uuid-mode-test-preview-rejects-non-uuids ()
   "No UUID at point, a v4 UUID, or a short region is a `user-error'.

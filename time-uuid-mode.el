@@ -5,8 +5,8 @@
 ;; Author: Robert Plant <rob@robertplant.io>
 ;; Maintainer: Robert Plant <rob@robertplant.io>
 ;; Created: March 10, 2023
-;; Modified: October 24, 2026
-;; Version: 0.0.5
+;; Modified: November 3, 2026
+;; Version: 0.0.6
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "27.1"))
@@ -35,7 +35,8 @@
   :prefix "time-uuid-mode-")
 
 (defconst time-uuid-mode-regexp
-  "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-1[0-9a-f]\\{3\\}-[89ab][0-9a-f]\\{3\\}-[0-9a-f]\\{12\\}\\b"
+  ;; both cases spelt out, so a buffer with `case-fold-search' off still matches
+  "\\b[0-9a-fA-F]\\{8\\}-[0-9a-fA-F]\\{4\\}-1[0-9a-fA-F]\\{3\\}-[89abAB][0-9a-fA-F]\\{3\\}-[0-9a-fA-F]\\{12\\}\\b"
   "Define a regular expression to match time-based UUIDs.")
 
 (defvar-local time-uuid-mode-stamp-overlays nil

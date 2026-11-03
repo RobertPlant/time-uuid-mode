@@ -24,7 +24,7 @@
 
 (require 'time-uuid-mode-test)
 
-(defconst run-tests-minimum 15
+(defconst run-tests-minimum 19
   "Fail the run if fewer than this many tests execute.")
 
 (let* ((stats (ert-run-tests-batch t))

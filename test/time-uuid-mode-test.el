@@ -36,6 +36,10 @@
 (defconst time-uuid-mode-test--iso "2024-01-12T00:00:00"
   "The decoding of `time-uuid-mode-test--uuid'.")
 
+(defconst time-uuid-mode-test--label "  2024-01-12 00:00:00 "
+  "The label for `time-uuid-mode-test--uuid' with time-ago off.
+A space to part it from the text, then the padded, coloured block.")
+
 (defmacro time-uuid-mode-test--with-buffer (text &rest body)
   "Run BODY in a temp buffer holding TEXT, point at `point-min'.
 Overlays and any preview timers are torn down afterwards so tests
@@ -117,17 +121,34 @@ so a decoder that truncates anywhere shows a wildly wrong year."
     (let ((time-uuid-mode-time-ago-flag nil))
       (time-uuid-mode-overlay-all-uuid-v1s)
       (should (equal (time-uuid-mode-test--list-labels)
-                     (list (concat " " time-uuid-mode-test--iso)
-                           (concat " " time-uuid-mode-test--iso)))))))
+                     (list time-uuid-mode-test--label
+                           time-uuid-mode-test--label))))))
 
 (ert-deftest time-uuid-mode-test-overlay-includes-time-ago-when-enabled ()
   "With the flag on, the label carries the relative time too."
   (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
     (let ((time-uuid-mode-time-ago-flag t))
       (time-uuid-mode-overlay-all-uuid-v1s)
-      (should (string-prefix-p (concat " " time-uuid-mode-test--iso " - ")
-                               (car (time-uuid-mode-test--list-labels))))
-      (should (string-suffix-p "days ago" (car (time-uuid-mode-test--list-labels)))))))
+      (should (string-prefix-p "  2024-01-12 00:00:00 - " (car (time-uuid-mode-test--list-labels))))
+      (should (string-suffix-p " days ago " (car (time-uuid-mode-test--list-labels)))))))
+
+(ert-deftest time-uuid-mode-test-label-is-one-coloured-block ()
+  "Everything after the separating space has the label face, spaces included."
+  (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
+    (let ((time-uuid-mode-time-ago-flag t))
+      (time-uuid-mode-overlay-all-uuid-v1s)
+      (let ((label (overlay-get (car time-uuid-mode-stamp-overlays) 'after-string)))
+        (should-not (get-text-property 0 'face label))
+        (should-not (text-property-not-all 1 (length label) 'face 'time-uuid-mode-label label))))))
+
+(ert-deftest time-uuid-mode-test-label-follows-the-time-format ()
+  "`time-uuid-mode-time-format' sets how the time in the label is written."
+  (time-uuid-mode-test--with-buffer time-uuid-mode-test--uuid
+    (let ((time-uuid-mode-time-ago-flag nil)
+          (time-uuid-mode-time-format "%FT%T"))
+      (time-uuid-mode-overlay-all-uuid-v1s)
+      (should (equal (time-uuid-mode-test--list-labels)
+                     (list (concat "  " time-uuid-mode-test--iso " ")))))))
 
 (ert-deftest time-uuid-mode-test-matches-uppercase-without-case-folding ()
   "Uppercase UUIDs are labelled and previewed with `case-fold-search' off.
@@ -138,12 +159,12 @@ The variant is a letter here, so its character class is covered too."
           (time-uuid-mode-time-ago-flag nil))
       (time-uuid-mode-overlay-all-uuid-v1s)
       (should (equal (time-uuid-mode-test--list-labels)
-                     (list (concat " " time-uuid-mode-test--iso))))
+                     (list time-uuid-mode-test--label)))
       (time-uuid-mode-remove-all-overlays)
       (goto-char (+ (point-min) 4))
       (time-uuid-mode-preview-formatted-time)
       (should (equal (time-uuid-mode-test--list-labels)
-                     (list (concat " " time-uuid-mode-test--iso)))))))
+                     (list time-uuid-mode-test--label))))))
 
 (ert-deftest time-uuid-mode-test-overlay-skips-non-v1 ()
   "A buffer with no v1 UUID gets no overlays."
@@ -242,7 +263,7 @@ would otherwise produce a negative count."
     (goto-char (+ (point-min) 4))
     (time-uuid-mode-preview-formatted-time)
     (should (equal (time-uuid-mode-test--list-labels)
-                   (list (concat " " time-uuid-mode-test--iso))))))
+                   (list time-uuid-mode-test--label)))))
 
 (ert-deftest time-uuid-mode-test-preview-cleans-up-after-five-seconds ()
   "The preview label is deleted by a one-shot timer five seconds later."

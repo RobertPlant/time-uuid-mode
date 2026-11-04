@@ -5,8 +5,8 @@
 ;; Author: Robert Plant <rob@robertplant.io>
 ;; Maintainer: Robert Plant <rob@robertplant.io>
 ;; Created: March 10, 2023
-;; Modified: November 3, 2026
-;; Version: 0.0.6
+;; Modified: November 4, 2026
+;; Version: 0.0.7
 ;; Keywords: extensions, convenience, data, tools
 ;; Homepage: https://github.com/RobertPlant/time-uuid-mode
 ;; Package-Requires: ((emacs "27.1"))
@@ -47,9 +47,14 @@
   :type 'boolean
   :group 'time-uuid)
 
+(defcustom time-uuid-mode-time-format "%F %T"
+  "The `format-time-string' format for the time in each label."
+  :type 'string
+  :group 'time-uuid)
+
 (defface time-uuid-mode-label
   '((t :background "yellow" :foreground "black"))
-  "Face for the timestamp shown beside a time-based UUID."
+  "Face for the whole label shown beside a time-based UUID."
   :group 'time-uuid)
 
 (defun time-uuid-mode-remove-all-overlays ()
@@ -100,12 +105,13 @@ A TIME in the future is described the same way."
   "Label the current line with the time stored in UUID and return the overlay.
 Non-nil TIME-AGO appends a relative \"time ago\" phrase."
   (let* ((time (time-uuid-mode--parse-uuid-time uuid))
-         (stamp (propertize (format-time-string "%FT%T" time) 'face 'time-uuid-mode-label))
+         (stamp (format-time-string time-uuid-mode-time-format time))
          (ago (when time-ago
-                (concat " - " (propertize (time-uuid-mode-describe-time-ago time)
-                                          'face 'time-uuid-mode-label))))
+                (concat " - " (time-uuid-mode-describe-time-ago time))))
+         ;; padded and faced as one block, so the colour has no gaps in it
+         (label (propertize (concat " " stamp ago " ") 'face 'time-uuid-mode-label))
          (overlay (make-overlay (1- (line-end-position)) (line-end-position))))
-    (overlay-put overlay 'after-string (concat " " stamp ago))
+    (overlay-put overlay 'after-string (concat " " label))
     (push overlay time-uuid-mode-stamp-overlays)
     overlay))
 
